@@ -92,7 +92,7 @@ function startMonitoring(mainWindow) {
   beforeRequestListener = (details, callback) => {
     // 监测POST打印请求
     if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
-      logMessage('检测到打印请求', {
+      logMessage('检测到打印请求，模拟成功响应', {
         url: details.url,
         method: details.method,
         headers: details.requestHeaders,
@@ -109,12 +109,6 @@ function startMonitoring(mainWindow) {
 
       // 如果有最近监测到的图片URL，发送打印请求
       if (global.latestImageUrl) {
-        logMessage('准备发送打印请求', {
-          imageUrl: global.latestImageUrl,
-          eventName: 'print-photos',
-          params: [global.latestImageUrl]
-        });
-
         try {
           // 确保 mainWindow 存在且有效
           if (mainWindow && !mainWindow.isDestroyed()) {
@@ -129,25 +123,114 @@ function startMonitoring(mainWindow) {
             stack: error.stack
           });
         }
-      } else {
-        logMessage('没有找到最近的图片URL', {
-          latestRequest: global.latestPrintRequest,
-          timestamp: new Date().toISOString()
-        });
       }
+
+      // 重定向到本地成功响应
+      callback({
+        redirectURL: 'data:application/json;base64,eyJzdGF0dXMiOiJPSyJ9'  // base64 编码的 {"status":"OK"}
+      });
+      return;
     }
     
-    // 必须调用回调让请求继续
+    // 其他请求正常放行
     callback({
       cancel: false
     });
   };
   
-  // 设置请求监听
-  session.defaultSession.webRequest.onCompleted({
-    urls: [`${TARGET_URLS.IMAGE}*`]
-  }, webRequestListener);
+  // 添加请求头监听器
+  session.defaultSession.webRequest.onBeforeSendHeaders({
+    urls: [
+      '*://*/print*',  // 监听所有域名的 /print 路径
+      'http://*/print*',
+      'https://*/print*'
+    ]
+  }, (details, callback) => {
+    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
+      // 修改请求头，添加自定义标记
+      details.requestHeaders['X-Custom-Response'] = 'true';
+      callback({ requestHeaders: details.requestHeaders });
+      return;
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
   
+  // 添加响应头监听器
+  session.defaultSession.webRequest.onHeadersReceived({
+    urls: [
+      '*://*/print*',  // 监听所有域名的 /print 路径
+      'http://*/print*',
+      'https://*/print*'
+    ]
+  }, (details, callback) => {
+    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
+      logMessage('修改打印请求响应状态为200', {
+        url: details.url,
+        method: details.method,
+        timestamp: new Date().toISOString()
+      });
+
+      // 修改响应头
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'content-type': ['application/json'],
+          'status': ['200']
+        },
+        statusLine: 'HTTP/1.1 200 OK'
+      });
+      return;
+    }
+    
+    callback({ responseHeaders: details.responseHeaders });
+  });
+  
+  // 添加请求结束监听器
+  session.defaultSession.webRequest.onCompleted({
+    urls: [
+      '*://*/print*',  // 监听所有域名的 /print 路径
+      'http://*/print*',
+      'https://*/print*',
+      `${TARGET_URLS.IMAGE}*`  // 监听图片请求
+    ]
+  }, (details) => {
+    // 处理打印请求
+    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
+      logMessage('打印请求已完成', {
+        url: details.url,
+        method: details.method,
+        statusCode: details.statusCode,
+        timestamp: new Date().toISOString(),
+        fromCache: details.fromCache,
+        responseHeaders: details.responseHeaders
+      });
+    }
+    // 处理图片请求
+    else if (details.method === 'GET' && details.statusCode === 200 && details.url.includes(TARGET_URLS.IMAGE)) {
+      logMessage('检测到目标图片请求', {
+        url: details.url,
+        method: details.method,
+        statusCode: details.statusCode,
+        timestamp: new Date().toISOString()
+      });
+      
+      // 存储图片URL
+      global.latestImageUrl = details.url;
+      
+      // 检测到图片后立即自动打印
+      logMessage('自动打印模式，开始下载并打印图片');
+      
+      // 检查窗口是否有效
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        // 创建一个隐藏的窗口来打印图片
+        // printDetectedImage(details.url, mainWindow);
+      } else {
+        logMessage('主窗口无效，无法打印');
+      }
+    }
+  });
+  
+  // 设置请求监听
   session.defaultSession.webRequest.onBeforeRequest({
     urls: [
       '*://*/print*',  // 监听所有域名的 /print 路径
