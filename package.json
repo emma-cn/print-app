@@ -1,0 +1,19 @@
+{
+  "name": "auto-photo-printer",
+  "version": "1.0.0",
+  "description": "自动打印照片的Electron应用",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "electron",
+    "printer",
+    "photo"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^30.5.1"
+  }
+}

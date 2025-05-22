@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>打印照片</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: white;
+    }
+    
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      img {
+        width: 100%;
+        height: auto;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <img id="printImage" src="" alt="打印图片">
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const path = require('path');
+    
+    // 日志函数
+    function logMessage(message, line = 0) {
+      const fileName = 'print.html';
+      const lineInfo = line ? `:${line}` : '';
+      const sourceInfo = `[${fileName}${lineInfo}]`;
+      const logEntry = `${sourceInfo} ${message}`;
+      
+      // 输出到控制台
+      console.log(logEntry);
+    }
+    
+    // 监听主进程发送的图片路径
+    ipcRenderer.on('print-image', (event, imagePath) => {
+      const filename = path.basename(imagePath);
+      logMessage(`接收到打印图片: ${filename}`, 48);
+      
+      const img = document.getElementById('printImage');
+      img.src = imagePath;
+      
+      // 图片加载完成后通知主进程准备打印
+      img.onload = () => {
+        logMessage(`图片 ${filename} 已加载完成，准备打印`, 55);
+        setTimeout(() => {
+          logMessage(`通知主进程准备打印图片: ${filename}`, 57);
+          ipcRenderer.send('ready-to-print');
+        }, 300); // 短暂延迟确保图片完全渲染
+      };
+      
+      // 如果图片加载失败
+      img.onerror = () => {
+        logMessage(`图片 ${filename} 加载失败`, 64);
+        ipcRenderer.send('ready-to-print'); // 仍然通知主进程，让它处理错误
+      };
+    });
+    
+    // 监听直接打印自动检测到的图片
+    ipcRenderer.on('print-detected-image', (event, imageUrl) => {
+      const img = document.getElementById('printImage');
+      const displayUrl = imageUrl.length > 40 ? imageUrl.substring(0, 40) + '...' : imageUrl;
+      logMessage(`接收到自动检测的图片: ${displayUrl}`, 73);
+      
+      // 设置图片URL
+      img.src = imageUrl;
+      
+      // 图片加载完成后通知主进程准备打印
+      img.onload = () => {
+        logMessage(`自动检测的图片已加载完成，准备直接打印`, 80);
+        setTimeout(() => {
+          logMessage(`通知主进程准备打印自动检测的图片`, 82);
+          ipcRenderer.send('ready-to-print-detected');
+        }, 300); // 短暂延迟确保图片完全渲染
+      };
+      
+      // 如果图片加载失败
+      img.onerror = () => {
+        logMessage(`自动检测的图片加载失败: ${displayUrl}`, 89);
+        ipcRenderer.send('ready-to-print-detected'); // 仍然通知主进程，让它处理错误
+      };
+    });
+    
+    // 初始日志
+    logMessage('打印页面已加载', 95);
+  </script>
+</body>
+</html> 
