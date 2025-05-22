@@ -138,53 +138,6 @@ function startMonitoring(mainWindow) {
     });
   };
   
-  // 添加请求头监听器
-  session.defaultSession.webRequest.onBeforeSendHeaders({
-    urls: [
-      '*://*/print*',  // 监听所有域名的 /print 路径
-      'http://*/print*',
-      'https://*/print*'
-    ]
-  }, (details, callback) => {
-    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
-      // 修改请求头，添加自定义标记
-      details.requestHeaders['X-Custom-Response'] = 'true';
-      callback({ requestHeaders: details.requestHeaders });
-      return;
-    }
-    callback({ requestHeaders: details.requestHeaders });
-  });
-  
-  // 添加响应头监听器
-  session.defaultSession.webRequest.onHeadersReceived({
-    urls: [
-      '*://*/print*',  // 监听所有域名的 /print 路径
-      'http://*/print*',
-      'https://*/print*'
-    ]
-  }, (details, callback) => {
-    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
-      logMessage('修改打印请求响应状态为200', {
-        url: details.url,
-        method: details.method,
-        timestamp: new Date().toISOString()
-      });
-
-      // 修改响应头
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'content-type': ['application/json'],
-          'status': ['200']
-        },
-        statusLine: 'HTTP/1.1 200 OK'
-      });
-      return;
-    }
-    
-    callback({ responseHeaders: details.responseHeaders });
-  });
-  
   // 添加请求结束监听器
   session.defaultSession.webRequest.onCompleted({
     urls: [
