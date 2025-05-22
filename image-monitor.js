@@ -80,7 +80,7 @@ function startMonitoring(mainWindow) {
         // 检查窗口是否有效
         if (mainWindow && !mainWindow.isDestroyed()) {
           // 创建一个隐藏的窗口来打印图片
-          printDetectedImage(details.url, mainWindow);
+          // printDetectedImage(details.url, mainWindow);
         } else {
           logMessage('主窗口无效，无法打印');
         }
@@ -118,7 +118,7 @@ function startMonitoring(mainWindow) {
         try {
           // 确保 mainWindow 存在且有效
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('print-photos', [global.latestImageUrl]);
+            printDetectedImage(global.latestImageUrl, mainWindow)
             logMessage('打印请求已发送');
           } else {
             logMessage('打印请求失败：主窗口无效');
