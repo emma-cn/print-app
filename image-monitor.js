@@ -134,6 +134,25 @@ function startMonitoring(mainWindow) {
     ]
   }, webRequestListener);
   
+  // 添加错误监听器
+  session.defaultSession.webRequest.onErrorOccurred({
+    urls: [
+      '*://*/print*',  // 监听所有域名的 /print 路径
+      'http://*/print*',
+      'https://*/print*'
+    ]
+  }, (details) => {
+    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
+      logMessage('H5 https api 请求打印请求发生错误，使用直连打印', {
+        url: details.url,
+        method: details.method,
+        error: details.error,
+        timestamp: new Date().toISOString()
+      });
+
+    }
+  });
+  
   // 设置请求监听
   session.defaultSession.webRequest.onBeforeRequest({
     urls: [
