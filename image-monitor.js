@@ -127,7 +127,7 @@ function startMonitoring(mainWindow) {
 
       // 重定向到本地成功响应
       callback({
-        redirectURL: 'data:application/json;base64,eyJzdGF0dXMiOiJPSyJ9'  // base64 编码的 {"status":"OK"}
+        cancel: false // base64 编码的 {"status":"OK"}
       });
       return;
     }
@@ -216,17 +216,6 @@ function startMonitoring(mainWindow) {
       
       // 存储图片URL
       global.latestImageUrl = details.url;
-      
-      // 检测到图片后立即自动打印
-      logMessage('自动打印模式，开始下载并打印图片');
-      
-      // 检查窗口是否有效
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        // 创建一个隐藏的窗口来打印图片
-        // printDetectedImage(details.url, mainWindow);
-      } else {
-        logMessage('主窗口无效，无法打印');
-      }
     }
   });
   
