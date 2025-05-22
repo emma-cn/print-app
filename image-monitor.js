@@ -73,17 +73,6 @@ function startMonitoring(mainWindow) {
         
         // 存储图片URL
         global.latestImageUrl = details.url;
-        
-        // 检测到图片后立即自动打印
-        logMessage('自动打印模式，开始下载并打印图片');
-        
-        // 检查窗口是否有效
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          // 创建一个隐藏的窗口来打印图片
-          // printDetectedImage(details.url, mainWindow);
-        } else {
-          logMessage('主窗口无效，无法打印');
-        }
       }
     }
   };
@@ -138,39 +127,12 @@ function startMonitoring(mainWindow) {
     });
   };
   
-  // 添加请求结束监听器
+  // 设置请求完成监听器
   session.defaultSession.webRequest.onCompleted({
     urls: [
-      '*://*/print*',  // 监听所有域名的 /print 路径
-      'http://*/print*',
-      'https://*/print*',
       `${TARGET_URLS.IMAGE}*`  // 监听图片请求
     ]
-  }, (details) => {
-    // 处理打印请求
-    if (details.method === 'POST' && details.url.includes(TARGET_URLS.PRINT)) {
-      logMessage('打印请求已完成', {
-        url: details.url,
-        method: details.method,
-        statusCode: details.statusCode,
-        timestamp: new Date().toISOString(),
-        fromCache: details.fromCache,
-        responseHeaders: details.responseHeaders
-      });
-    }
-    // 处理图片请求
-    else if (details.method === 'GET' && details.statusCode === 200 && details.url.includes(TARGET_URLS.IMAGE)) {
-      logMessage('检测到目标图片请求', {
-        url: details.url,
-        method: details.method,
-        statusCode: details.statusCode,
-        timestamp: new Date().toISOString()
-      });
-      
-      // 存储图片URL
-      global.latestImageUrl = details.url;
-    }
-  });
+  }, webRequestListener);
   
   // 设置请求监听
   session.defaultSession.webRequest.onBeforeRequest({
